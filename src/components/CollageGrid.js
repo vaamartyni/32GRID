@@ -78,7 +78,7 @@ const CollageGrid = ({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
             {/* Save All Button */}
-            <div style={{ marginBottom: '20px', position: 'fixed', bottom: '50px', right: '100px', zIndex: '100' }}>
+            <div style={{ marginBottom: '20px', position: 'fixed', bottom: '0px', right: '20px', zIndex: '100' }}>
                 <Button
                     variant="contained"
                     color="primary"
