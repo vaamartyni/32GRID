@@ -16,7 +16,7 @@ const DropzoneUpload = ({ onDrop }) => (
         {({ getRootProps, getInputProps }) => (
             <DropzoneContainer {...getRootProps()}>
                 <input {...getInputProps()} />
-                <p>Drag & drop some photos here, or click to select files</p>
+                <p>Переместите сюда изображения или нажмите для выбора</p>
             </DropzoneContainer>
         )}
     </Dropzone>

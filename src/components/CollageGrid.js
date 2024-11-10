@@ -1,133 +1,125 @@
 // src/components/CollageGrid.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef } from 'react';
 import styled from 'styled-components';
-import ImageCard from './ImageCard';
+import GridComponent from './GridComponent';
+import Typography from '@mui/material/Typography';
+import { Button } from '@mui/material';
+import { Save } from '@mui/icons-material';
 
 const CollageWrapper = styled.div`
-    position: relative;
-    width: 100%;
-    max-width: 800px; /* Adjust as needed */
-    margin: 0 auto;
-    border: 1px solid #ccc;
-    overflow: hidden;
-`;
-
-const Collage = styled.div`
-    display: grid;
-    width: 100%;
-    height: auto;
-    grid-gap: 1px;
-    aspect-ratio: 16 / 9; /* Modern browsers support */
-    position: relative;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 `;
 
 const CollageGrid = ({
                          originalImages,
-                         collageType,
-                         collageRef,
-                         cropParameters,
-                         applyCropToAll,
+                         globalFontSize,
+                         globalTextColor,
+                         gridSize,
                      }) => {
-    const numRows = 2;
-    const numCols = 6;
+    // Ensure we have enough images
+    if (originalImages.length < 32) {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    width: '100%',
+                    height: '100%',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                <Typography variant="h6" noWrap component="div">
+                    Загрузите изображения для начала работы
+                </Typography>
+            </div>
+        );
+    }
 
-    const getCollageStyle = (type) => {
-        switch (type) {
-            case 'two-rows-ten-elements':
-                return {
-                    gridTemplateColumns: 'repeat(5, 1fr)',
-                    gridTemplateRows: 'repeat(2, 1fr)',
-                };
-            case 'two-rows-twelve-elements':
-                return {
-                    gridTemplateColumns: 'repeat(6, 1fr)',
-                    gridTemplateRows: 'repeat(2, 1fr)',
-                };
-            default:
-                return {};
-        }
-    };
+    // Create a map from fileNumber to image
+    const imageMap = {};
+    originalImages.forEach((img) => {
+        imageMap[img.fileNumber] = img;
+    });
 
-    // Manage text state for each image
-    const [texts, setTexts] = useState(Array(originalImages.length).fill(''));
+    // Define fileNumbers for each grid
+    const grid1ImageNumbers = [13, 12, 11, 21, 22, 23, 43, 42, 41, 31, 32, 33];
+    const grid2ImageNumbers = [18, 17, 16, 15, 14, 48, 47, 46, 45, 44];
+    const grid3ImageNumbers = [24, 25, 26, 27, 28, 34, 35, 36, 37, 38];
 
-    // Update texts array when originalImages length changes
-    useEffect(() => {
-        setTexts(Array(originalImages.length).fill(''));
-    }, [originalImages.length]);
+    // Get images for each grid
+    const grid1Images = grid1ImageNumbers
+        .map((num) => imageMap[num])
+        .filter(Boolean);
+    const grid2Images = grid2ImageNumbers
+        .map((num) => imageMap[num])
+        .filter(Boolean);
+    const grid3Images = grid3ImageNumbers
+        .map((num) => imageMap[num])
+        .filter(Boolean);
 
-    const autonumbering = () => {
-        const startingNumber = '1.1'; // Starting number as per your example
-        let [startFirstNum, startSecondNum] = startingNumber.split('.').map(Number);
+    // Create refs for each GridComponent
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const grid1Ref = useRef(null);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const grid2Ref = useRef(null);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const grid3Ref = useRef(null);
 
-        const newTexts = [...texts];
-
-        // Define the numbering logic
-        const startRow = 0;
-        const startCol = 2; // Third image in first row (indexing from 0)
-
-        // First row numbering
-        for (let col = 0; col < numCols; col++) {
-            const index = startRow * numCols + col;
-            if (index >= originalImages.length) continue;
-
-            if (col <= startCol) {
-                // Left side including starting image
-                const secondNum = startSecondNum + (startCol - col);
-                newTexts[index] = `${startFirstNum}.${secondNum}`;
-            } else {
-                // Right side
-                const firstNum = startFirstNum + 1;
-                const secondNum = 1 + (col - startCol - 1);
-                newTexts[index] = `${firstNum}.${secondNum}`;
-            }
-        }
-
-        // Second row numbering
-        const otherRow = 1; // Second row
-        for (let col = 0; col < numCols; col++) {
-            const index = otherRow * numCols + col;
-            if (index >= originalImages.length) continue;
-
-            if (col <= startCol) {
-                // Left side
-                const firstNum = startFirstNum + 3;
-                const secondNum = startSecondNum + (startCol - col);
-                newTexts[index] = `${firstNum}.${secondNum}`;
-            } else {
-                // Right side
-                const firstNum = startFirstNum + 2;
-                const secondNum = 1 + (col - startCol - 1);
-                newTexts[index] = `${firstNum}.${secondNum}`;
-            }
-        }
-
-        setTexts(newTexts);
+    const handleSaveAll = () => {
+        if (grid1Ref.current) grid1Ref.current.saveCollage();
+        if (grid2Ref.current) grid2Ref.current.saveCollage();
+        if (grid3Ref.current) grid3Ref.current.saveCollage();
     };
 
     return (
-        <div>
-            <button onClick={autonumbering} style={{ marginBottom: '10px' }}>
-                Autonumbering for 2x6
-            </button>
-            <CollageWrapper ref={collageRef}>
-                <Collage style={getCollageStyle(collageType)}>
-                    {originalImages.map((image, index) => (
-                        <ImageCard
-                            key={index}
-                            originalImage={image}
-                            cropParameters={cropParameters}
-                            applyCropToAll={applyCropToAll}
-                            text={texts[index]}
-                            setText={(newText) => {
-                                const newTexts = [...texts];
-                                newTexts[index] = newText;
-                                setTexts(newTexts);
-                            }}
-                        />
-                    ))}
-                </Collage>
+        <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            {/* Save All Button */}
+            <div style={{ marginBottom: '20px', position: 'fixed', bottom: '50px', right: '100px', zIndex: '100' }}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSaveAll}
+                    startIcon={<Save />}
+                >
+                    Сохранить все
+                </Button>
+            </div>
+
+            <CollageWrapper>
+                <GridComponent
+                    ref={grid1Ref}
+                    gridSize={gridSize}
+                    globalFontSize={globalFontSize}
+                    globalTextColor={globalTextColor}
+                    images={grid1Images}
+                    gridNumber={1}
+                />
+            </CollageWrapper>
+            <CollageWrapper>
+                <GridComponent
+                    ref={grid2Ref}
+                    gridSize={gridSize}
+                    globalFontSize={globalFontSize}
+                    globalTextColor={globalTextColor}
+                    images={grid2Images}
+                    gridNumber={2}
+                />
+            </CollageWrapper>
+
+            {/* Third Grid */}
+            <CollageWrapper>
+                <GridComponent
+                    ref={grid3Ref}
+                    gridSize={gridSize}
+                    globalFontSize={globalFontSize}
+                    globalTextColor={globalTextColor}
+                    images={grid3Images}
+                    gridNumber={3}
+                />
             </CollageWrapper>
         </div>
     );

@@ -1,15 +1,42 @@
 // src/components/ImageCard.js
 
-import React, {useState, useCallback, useRef, useEffect} from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import Draggable from 'react-draggable';
 import Modal from 'react-modal';
 import Cropper from 'react-easy-crop';
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import {Avatar, Button, CircularProgress, Dialog, DialogTitle, ListItemAvatar} from "@mui/material";
+import ListItemText from "@mui/material/ListItemText";
+import Typography from "@mui/material/Typography";
+import {Cancel, Save, SaveAlt, SaveAsSharp, SaveAsTwoTone} from "@mui/icons-material";
+
+const gridArePixelsMap = {
+    1: {
+        height: 840,
+        width: 473,
+        x: 1120,
+        y: 348
+    },
+    2: {
+        height: 840,
+        width: 473,
+        x: 1163,
+        y: 327
+    },
+    3: {
+        height: 840,
+        width: 473,
+        x: 1122,
+        y: 338
+    }
+}
 
 const ImageWrapper = styled.div`
     position: relative;
     width: 100%;
-    padding-bottom: 177.78%; /* 9:16 aspect ratio for individual images */
+    padding-bottom: 177.78%; /* 9:16 aspect ratio */
     overflow: hidden;
 `;
 
@@ -21,15 +48,6 @@ const Image = styled.img`
     height: 100%;
     object-fit: cover;
     cursor: pointer;
-`;
-
-const TextOverlay = styled.div`
-  position: absolute;
-  cursor: move;
-  user-select: none;
-  font-size: ${(props) => props.fontSize || '28px'};
-  color: ${(props) => props.color || '#fffa09'};
-  //text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
 `;
 
 const modalStyles = {
@@ -44,75 +62,73 @@ const modalStyles = {
     },
 };
 
-const ImageCard = ({   originalImage,
+const ImageCard = ({
+                       originalImage,
                        applyCropToAll,
                        cropParameters,
                        text,
-                       setText, }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
+                       defaultCropParameters,
+    globalTextColor, globalFontSize, gridNumber
+                   }) => {
+    const [loading, setLoading] = useState(false);
+    const [crop, setCrop] = useState(defaultCropParameters.crop);
+    const [zoom, setZoom] = useState(defaultCropParameters.zoom);
     const [croppedImage, setCroppedImage] = useState(originalImage.preview);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-
-
-    // Text overlay state
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(defaultCropParameters.croppedAreaPixels);
     const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
-    const [fontSize, setFontSize] = useState(20); // New state for font size
-    const [textColor, setTextColor] = useState('#fff'); // New state for text color
-
-    const textRef = useRef(null);
 
     const handleCropComplete = useCallback((croppedArea, croppedPixels) => {
         setCroppedAreaPixels(croppedPixels);
     }, []);
 
     const handleImageClick = () => {
-        setIsModalOpen(true);
+        setOpen(true)
     };
 
-    const getCroppedImg = useCallback((imageSrc, pixelCrop) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+    const getCroppedImg = useCallback(
+        (imageSrc, pixelCrop) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const image = document.createElement('img');
+            image.crossOrigin = 'anonymous';
+            image.src = imageSrc;
+            return new Promise((resolve, reject) => {
+                image.onload = () => {
+                    canvas.width = pixelCrop.width;
+                    canvas.height = pixelCrop.height;
 
-        const image = document.createElement('img');
-        image.crossOrigin = 'anonymous';
-        image.src = imageSrc;
+                    ctx.drawImage(
+                        image,
+                        pixelCrop.x,
+                        pixelCrop.y,
+                        pixelCrop.width,
+                        pixelCrop.height,
+                        0,
+                        0,
+                        pixelCrop.width,
+                        pixelCrop.height
+                    );
 
-        return new Promise((resolve, reject) => {
-            image.onload = () => {
-                canvas.width = pixelCrop.width;
-                canvas.height = pixelCrop.height;
+                    // Add text to canvas
+                    if (text) {
+                        ctx.font = `${globalFontSize}px Arial`;
+                        ctx.fillStyle = globalTextColor;
+                        ctx.textBaseline = 'top';
 
-                ctx.drawImage(
-                    image,
-                    pixelCrop.x,
-                    pixelCrop.y,
-                    pixelCrop.width,
-                    pixelCrop.height,
-                    0,
-                    0,
-                    pixelCrop.width,
-                    pixelCrop.height
-                );
+                        const textX = textPosition.x * canvas.width + 10;
+                        const textY = textPosition.y * canvas.height + 20;
 
-                // Add text to canvas
-                // if (text) {
-                //     ctx.font = '28px Arial';
-                //     ctx.fillStyle = '#ffffff';
-                //     ctx.textBaseline = 'top';
-                //
-                //     const textX = textPosition.x * canvas.width;
-                //     const textY = textPosition.y * canvas.height;
-                //
-                //     ctx.fillText(text, textX, textY);
-                // }
+                        ctx.fillText(text, textX, textY);
+                    }
 
-                resolve(canvas.toDataURL('image/png'));
-            };
-            image.onerror = (error) => reject(error);
-        });
-    }, [text, textPosition]);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+
+                image.onerror = (error) => reject(error);
+            });
+        },
+        [text, textPosition, globalFontSize, globalTextColor]
+    );
 
     const handleApplyToAll = () => {
         applyCropToAll({
@@ -120,28 +136,32 @@ const ImageCard = ({   originalImage,
             zoom,
             croppedAreaPixels,
         });
-        setIsModalOpen(false);
+        setOpen(false)
     };
 
     const saveCroppedImage = async () => {
         try {
-            const croppedDataUrl = await getCroppedImg(originalImage.preview, croppedAreaPixels);
+            const croppedDataUrl = await getCroppedImg(
+                originalImage.preview,
+                croppedAreaPixels
+            );
             setCroppedImage(croppedDataUrl);
-            setIsModalOpen(false);
+            setOpen(false);
         } catch (error) {
             console.error(error);
         }
     };
+    useEffect(() => {
+        setLoading(true)
+        saveCroppedImage().then(() => setLoading(false))
+    },[globalFontSize, globalTextColor])
 
-    const handleTextDrag = (e, data) => {
-        const wrapper = textRef.current.parentElement;
-        const wrapperRect = wrapper.getBoundingClientRect();
-
-        setTextPosition({
-            x: data.x / wrapperRect.width,
-            y: data.y / wrapperRect.height,
-        });
-    };
+    // useEffect(() => {
+    //     if (fontSettings) {
+    //         setFontSize(fontSettings.fontSize);
+    //         setTextColor(fontSettings.textColor);
+    //     }
+    // }, [fontSettings]);
 
     useEffect(() => {
         if (cropParameters) {
@@ -157,39 +177,27 @@ const ImageCard = ({   originalImage,
                     console.error(error);
                 });
         }
-    }, [cropParameters, getCroppedImg, originalImage.preview]);
+    }, [cropParameters, globalFontSize, globalTextColor]);
+
+    const [open, setOpen] = React.useState(false);
+
+    const handleClickOpen = () => {
+        setOpen(true);
+    };
+
+    const handleClose = () => {
+        setOpen(false);
+    };
 
     return (
         <div>
             <ImageWrapper>
                 <Image src={croppedImage} alt="croppable" onClick={handleImageClick} />
-
-                {text && (
-                    <Draggable
-                        onDrag={handleTextDrag}
-                        position={{
-                            x: textPosition.x * 100 + '%',
-                            y: textPosition.y * 100 + '%',
-                        }}
-                    >
-                        <TextOverlay
-                            ref={textRef}
-                            style={{ left: 0, top: 0 }}
-                            fontSize={`${fontSize}px`}
-                            color={textColor}
-                        >
-                            {text}
-                        </TextOverlay>
-                    </Draggable>
-                )}
-
-                <Modal
-                    isOpen={isModalOpen}
-                    onRequestClose={() => setIsModalOpen(false)}
-                    style={modalStyles}
-                    contentLabel="Crop Image Modal"
-                >
-                    <h2>Crop Image</h2>
+                {loading && <div style={{position: 'absolute', bottom: 0, left: 0}}><CircularProgress size="30px"/></div>}
+            </ImageWrapper>
+            <Dialog onClose={handleClose} open={open}>
+                <div style={{width: '500px', padding: '10px'}}>
+                    <DialogTitle>Параметры изображения</DialogTitle>
                     <div style={{position: 'relative', width: '100%', height: '400px'}}>
                         <Cropper
                             image={originalImage.preview}
@@ -201,49 +209,39 @@ const ImageCard = ({   originalImage,
                             onCropComplete={handleCropComplete}
                         />
                     </div>
-                    <div style={{marginTop: '10px'}}>
-                        <input
-                            type="text"
-                            placeholder="Enter text"
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                            style={{width: '100%', padding: '8px'}}
-                        />
-                        <div style={{marginTop: '10px', display: 'flex', alignItems: 'center'}}>
-                            <label style={{marginRight: '10px'}}>Font Size:</label>
-                            <input
-                                type="number"
-                                value={fontSize}
-                                onChange={(e) => setFontSize(Number(e.target.value))}
-                                min="10"
-                                max="100"
-                                style={{width: '60px'}}
-                            />
-                            <label style={{marginLeft: '20px', marginRight: '10px'}}>Color:</label>
-                            <input
-                                type="color"
-                                value={textColor}
-                                onChange={(e) => setTextColor(e.target.value)}
-                            />
+                    <div style={{display: 'flex', gap: '5px', flexDirection: 'column'}}>
+                        {/*<Button variant={"contained"} onClick={() => {}} style={{marginTop: '10px'}}>*/}
+                        {/*    Применить*/}
+                        {/*</Button>*/}
+                        <div style={{display: 'flex', flexDirection: 'row'}}>
+                            <Button color="success" fullWidth variant="contained" size="small" endIcon={<Save />} onClick={saveCroppedImage} style={{marginTop: '10px'}}>
+                                Применить
+                            </Button>
+                            <Button
+                                color="warning"
+                                variant="contained"
+                                size="small"
+                                fullWidth
+                                endIcon={<SaveAsTwoTone />}
+                                onClick={handleApplyToAll}
+                                style={{marginLeft: '10px', marginTop: '10px'}}
+                            >
+                                Применить ко всем
+                            </Button>
                         </div>
+                        <Button
+                            color="error"
+                            variant="outlined"
+                            size="small"
+                            fullWidth
+                            endIcon={<Cancel />}
+                            onClick={() => setOpen(false)}
+                        >
+                            Отмена
+                        </Button>
                     </div>
-                    <button onClick={saveCroppedImage} style={{marginTop: '10px'}}>
-                        Save
-                    </button>
-                    <button
-                        onClick={handleApplyToAll}
-                        style={{marginLeft: '10px', marginTop: '10px'}}
-                    >
-                        Apply to All
-                    </button>
-                    <button
-                        onClick={() => setIsModalOpen(false)}
-                        style={{marginLeft: '10px', marginTop: '10px'}}
-                    >
-                        Cancel
-                    </button>
-                </Modal>
-            </ImageWrapper>
+                </div>
+            </Dialog>
         </div>
     );
 };
