@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/32GRID/static/css/main.e6c13ad2.css",
+    "main.js": "/32GRID/static/js/main.fed29f8d.js",
+    "static/js/453.520e1735.chunk.js": "/32GRID/static/js/453.520e1735.chunk.js",
+    "index.html": "/32GRID/index.html",
+    "main.e6c13ad2.css.map": "/32GRID/static/css/main.e6c13ad2.css.map",
+    "main.fed29f8d.js.map": "/32GRID/static/js/main.fed29f8d.js.map",
+    "453.520e1735.chunk.js.map": "/32GRID/static/js/453.520e1735.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.fed29f8d.js"
+  ]
+}
